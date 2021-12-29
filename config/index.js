@@ -1,6 +1,6 @@
 const dotenv = require('dotenv');
 
-const { logger } = require('./logger');
+const { logger } = require('../logger');
 
 dotenv.config();
 

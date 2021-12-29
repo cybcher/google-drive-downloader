@@ -1,8 +1,9 @@
-const fs = require("fs");
-const uuid = require("uuid");
-const { logger } = require("../logger");
+const fs = require('fs');
+const uuid = require('uuid');
 
-const DEFAULT_DOWNLOAD_PATH = "./files/";
+const { logger } = require('../logger');
+
+const DEFAULT_DOWNLOAD_PATH = './files/';
 
 const getFileStream = (out) => fs.createWriteStream(out);
 
@@ -17,13 +18,13 @@ const createFoldersStructure = (path) => {
   if (!fs.existsSync(DEFAULT_DOWNLOAD_PATH)) {
     fs.mkdirSync(DEFAULT_DOWNLOAD_PATH);
 
-    logger.log(`Basic ${DEFAULT_DOWNLOAD_PATH} folder created "Successfully".`);
+    logger.log(`Basic ${DEFAULT_DOWNLOAD_PATH} folder created 'Successfully'.`);
   }
 
   if (!fs.existsSync(path)) {
     fs.mkdirSync(path);
 
-    logger.log(`Folder ${path} created "Successfully".`);
+    logger.log(`Folder ${path} created 'Successfully'.`);
   }
 };
 
