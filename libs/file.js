@@ -1,6 +1,6 @@
 const fs = require("fs");
 const uuid = require("uuid");
-const { logger } = require("./logger");
+const { logger } = require("../logger");
 
 const DEFAULT_DOWNLOAD_PATH = "./files/";
 

@@ -1,10 +1,10 @@
 const { finished } = require('stream');
 const { promisify } = require('util');
 
-const file = require("./file");
-const google = require("./google");
-const archiver = require("./archiver");
-const { logger } = require("./logger");
+const archiver = require('./libs/archiver');
+const google = require('./libs/google');
+const { logger } = require('./logger');
+const file = require('./libs/file');
 
 const promisifiedFinished = promisify(finished);
 
@@ -13,15 +13,15 @@ async function main(id) {
   file.createFoldersStructure(defaultPath);
 
   const archiveStream = archiver.getArchiver();
-  const fileStream = file.getFileStream(defaultPath + "/google-drive.zip");
+  const fileStream = file.getFileStream(`${defaultPath}/google-drive.zip`);
 
-  fileStream.on("close", function () {
+  fileStream.on('close', function () {
     logger.log(
-      "archiver has been finalized and the output file descriptor has closed."
+     'archiver has been finalized and the output file descriptor has closed.'
     );
   });
 
-  archiveStream.on("error", function (err) {
+  archiveStream.on('error', function (err) {
     throw err;
   });
   archiveStream.pipe(fileStream);
@@ -37,7 +37,7 @@ async function main(id) {
   // });
 
   // 2 way download array buffer and convert into buffer
-  // const buffer = Buffer.from(googleBuffer, "utf-8")
+  // const buffer = Buffer.from(googleBuffer,'utf-8')
   // archiveStream.append(buffer, {
   //   name: googleResponse.details.name,
   // });
@@ -53,7 +53,7 @@ async function main(id) {
       throw err;
     }
 
-    logger.log(bytes + " total bytes");
+    logger.log(`${bytes} total bytes`);
   });
 }
 
@@ -61,11 +61,11 @@ async function downloadFromGDIntoBuffer(googleStream) {
   let data = [];
   return new Promise((resolve, reject) => {
     googleStream
-      .on("data", (chunk) => {
+      .on('data', (chunk) => {
         data.push(chunk);
       })
-      .on("error", (error) => reject(error))
-      .on("end", () => {
+      .on('error', (error) => reject(error))
+      .on('end', () => {
         let buffer = Buffer.concat(data);
         resolve(buffer);
       });
@@ -75,7 +75,7 @@ async function downloadFromGDIntoBuffer(googleStream) {
 async function isFolder(id) {
   const authClient = await google.authentication();
   const result = await google.isFolder(id, authClient);
-  logger.log("This is folder:", result);
+  logger.log('This is folder: ', result);
   return result;
 }
 
@@ -91,7 +91,7 @@ async function downloadFile(fileId) {
 async function downloadFolderFiles(folderId) {
   const authClient = await google.authentication();
   const filesDownloads = [];
-  logger.log(`Getting folder files (folderId: "${folderId}")`);
+  logger.log(`Getting folder files (folderId: '${folderId}')`);
   const files = await google.getFolderFiles(folderId, authClient);
   logger.log(`Folder files count: ${files.length}`);
   for (let index = 0; index < files.length; index++) {
@@ -104,9 +104,9 @@ async function downloadFolderFiles(folderId) {
   return await Promise.all(filesDownloads);
 }
 
-const getFileExtension = (file, defaultExtension = "txt") => {
+const getFileExtension = (file, defaultExtension ='txt') => {
   return file.fullFileExtension == undefined && file.fileExtension == undefined
-    ? "doc"
+    ?'doc'
     : file.fullFileExtension == file.fileExtension
     ? file.fullFileExtension
     : defaultExtension;
@@ -116,6 +116,6 @@ const getDownloadingFileFullName = (file) =>
   `${file.name}.${getFileExtension(file)}`;
 
 const driveResourceUrl =
-  "https://drive.google.com/file/d/1o6iY2kHCIp8BiVgrHQgBAYXVXk-3kGsh";
-const id = "1o6iY2kHCIp8BiVgrHQgBAYXVXk-3kGsh";
+ 'https://drive.google.com/file/d/1o6iY2kHCIp8BiVgrHQgBAYXVXk-3kGsh';
+const id ='1o6iY2kHCIp8BiVgrHQgBAYXVXk-3kGsh';
 Promise.resolve(main(id)).catch(console.error);

@@ -1,5 +1,5 @@
 const archiver = require('archiver');
-const { logger } = require('./logger');
+const { logger } = require('../logger');
 
 const getArchiver = () => {
   const archive = archiver('zip', {
