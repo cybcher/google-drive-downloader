@@ -40,13 +40,7 @@ async function main(id) {
   // });
 
   // 3 way how to download
-  
 
-  // archiveStream.append(googleResponse.stream, {
-  //   name: googleResponse.details.name,
-  // });
-  // await promisifiedFinished(googleResponse.stream)
-  // // archive.directory(dest, name);
   await archiveStream.finalize(function (err, bytes) {
     if (err) {
       throw err;
@@ -78,10 +72,17 @@ async function downloadFromGDIntoBuffer(googleStream) {
   });
 }
 
-async function downloadFile(fileId, archiverStream) {
+async function downloadFileAndArchive(fileId, archiverStream) {
+  const file = await downloadFile(fileId);
+  archiverStream.append(file.stream, { name: file.details.name });
+  await promisifiedFinished(file.stream);
+
+  return file;
+}
+
+async function downloadFile(fileId) {
   const authClient = await google.authentication();
   const file = await google.getObject(fileId, authClient);
-
   const stream = await google.downloadFile(file.id, file.mimeType, authClient);
 
   return { details: file, stream };
@@ -105,7 +106,7 @@ async function downloadFolderFiles(folderId, archiverStream, folderName = '') {
       continue;
     }
 
-    const downloadedFile = await downloadFile(file.id, archiverStream);
+    const downloadedFile = await downloadFile(file.id);
     archiverStream.append(downloadedFile.stream, { name: `${folderName}/${downloadedFile.details.name}` })
     await promisifiedFinished(downloadedFile.stream)
     filesDownloads.push(downloadedFile);
@@ -119,11 +120,10 @@ async function download(id, archiverStream) {
   let result;
   if (isFolderState) {
     result = await downloadFolderFiles(id, archiverStream);
-    return result;
   }
 
-  result = downloadFile(id, archiverStream);
-  return [result];
+  result = await downloadFileAndArchive(id, archiverStream);
+  return result;
 }
 
 const getFileExtension = (file, defaultExtension ='txt') => {
@@ -147,4 +147,8 @@ const getUrlId = (url) => {
   return url.split('/').reverse()[0];
 };
 
-Promise.resolve(main(getUrlId(testFolderWithFoldersChains))).catch(console.error);
+Promise.resolve(main(getUrlId(testFile))).catch(console.error);
+// Promise.resolve(main(getUrlId(mainTestFolder))).catch(console.error);
+// Promise.resolve(main(getUrlId(testFolderWithFiles))).catch(console.error);
+// Promise.resolve(main(getUrlId(testFolderWithFolders))).catch(console.error);
+// Promise.resolve(main(getUrlId(testFolderWithFoldersChains))).catch(console.error);
