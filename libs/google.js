@@ -1,6 +1,6 @@
 const { google } = require('googleapis');
 
-const { logger } = require('../logger');
+const { logger } = require('../utils/logger');
 const { googleCredentials, googleScopes } = require('../config');
 
 async function authentication() {
