@@ -106,7 +106,6 @@ async function downloadFolderFiles(folderId, archiverStream, folderName = '') {
     }
 
     const downloadedFile = await downloadFile(file.id, archiverStream);
-    console.log(`${folderName}/${downloadedFile.details.name}`);
     archiverStream.append(downloadedFile.stream, { name: `${folderName}/${downloadedFile.details.name}` })
     await promisifiedFinished(downloadedFile.stream)
     filesDownloads.push(downloadedFile);
@@ -146,6 +145,6 @@ const testFolderWithFoldersChains = 'https://drive.google.com/drive/folders/1b1K
 
 const getUrlId = (url) => {
   return url.split('/').reverse()[0];
-}
-const id ='1o6iY2kHCIp8BiVgrHQgBAYXVXk-3kGsh';
+};
+
 Promise.resolve(main(getUrlId(testFolderWithFoldersChains))).catch(console.error);
