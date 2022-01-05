@@ -1,5 +1,5 @@
 const fs = require("fs");
-const uuid = require("uuid");
+const { v4: uuidv4 } = require('uuid')
 
 const { logger } = require("../utils/logger");
 
@@ -17,7 +17,7 @@ const getFileStream = (out) => {
 };
 
 const getDefaultPath = () => {
-  const uniqueFolderName = uuid.v4();
+  const uniqueFolderName = uuidv4();
   const downloadPath = DEFAULT_DOWNLOAD_PATH.concat(uniqueFolderName);
 
   return downloadPath;
