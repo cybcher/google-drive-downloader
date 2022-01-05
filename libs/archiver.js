@@ -1,13 +1,14 @@
-const archiver = require('archiver');
-
-const { logger } = require('../utils/logger');
+const archiver = require("archiver");
 
 const getArchiver = () => {
-  const archive = archiver('zip', {
+  const archive = archiver("zip", {
     zlib: { level: 9 },
   });
 
-  logger.log('Archiver created.')
+  archive.on("error", function (err) {
+    throw err;
+  });
+
   return archive;
 };
 

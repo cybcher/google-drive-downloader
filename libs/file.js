@@ -1,17 +1,26 @@
-const fs = require('fs');
-const uuid = require('uuid');
+const fs = require("fs");
+const uuid = require("uuid");
 
-const { logger } = require('../utils/logger');
+const { logger } = require("../utils/logger");
 
-const DEFAULT_DOWNLOAD_PATH = './files/';
+const DEFAULT_DOWNLOAD_PATH = "./files/";
 
-const getFileStream = (out) => fs.createWriteStream(out);
+const getFileStream = (out) => {
+  const fileStream = fs.createWriteStream(out);
+  fileStream.on("close", function () {
+    logger.log(
+      "Archiver has been finalized and the output file(s) descriptor has closed."
+    );
+  });
+
+  return fileStream;
+};
 
 const getDefaultPath = () => {
-    const uniqueFolderName = uuid.v4();
-    const downloadPath = DEFAULT_DOWNLOAD_PATH.concat(uniqueFolderName);
+  const uniqueFolderName = uuid.v4();
+  const downloadPath = DEFAULT_DOWNLOAD_PATH.concat(uniqueFolderName);
 
-    return downloadPath;
+  return downloadPath;
 };
 
 const createFoldersStructure = (path) => {
