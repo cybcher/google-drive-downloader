@@ -77,13 +77,13 @@ async function getFolderFiles(folderId, auth) {
   return false;
 }
 
-function downloadGoogleWorkspaceFile(fileId, auth) {
+function downloadGoogleWorkspaceFile(fileId, auth, mimeType) {
   const drive = google.drive({ version: 'v3', auth });
   return drive.files
     .export(
       {
         fileId,
-        mimeType: 'application/vnd.oasis.opendocument.text',
+        mimeType,
       },
       {
         responseType: 'stream',
@@ -111,13 +111,45 @@ function downloadStoredFileOnGoogleDrive(fileId, auth) {
     )
     .then((res) => res.data)
     .catch((err) =>
-      logger.log('Error while downloading stored on google drive file:', err)
+      {
+        console.error(err);
+        logger.log('Error while downloading stored on google drive file:');
+      }
     );
 }
 
 function downloadFile(fileId, fileMimeType, auth) {
-  return ['application/vnd.google-apps.document'].includes(fileMimeType)
-    ? downloadGoogleWorkspaceFile(fileId, auth)
+  const correspondingTypes = {
+    'application/vnd.google-apps.document':  {
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      ext: '.docx'
+    },
+    'application/vnd.google-apps.presentation': {
+      mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      ext: '.pptx'
+    },
+    'application/vnd.google-apps.spreadsheet': {
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ext: '.xlsx'
+    },
+    'application/vnd.google-apps.drawing': {
+      mimeType: 'image/png',
+      ext: '.png'
+    },
+    'application/vnd.google-apps.form': {
+      mimeType: "application/zip",
+      ext: '.zip'
+    }
+  };
+
+  return [
+    'application/vnd.google-apps.document',
+    'application/vnd.google-apps.presentation',
+    'application/vnd.google-apps.spreadsheet',
+    'application/vnd.google-apps.drawing',
+    'application/vnd.google-apps.form'
+  ].includes(fileMimeType)
+    ? downloadGoogleWorkspaceFile(fileId, auth, correspondingTypes[fileMimeType].mimeType)
     : downloadStoredFileOnGoogleDrive(fileId, auth);
 }
 

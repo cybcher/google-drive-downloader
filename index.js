@@ -50,10 +50,8 @@ async function main(id) {
   });
 }
 
-async function isFolder(id) {
-  const authClient = await google.authentication();
+async function isFolder(id, authClient) {
   const result = await google.isFolder(id, authClient);
-  logger.log('This is folder: ', result);
   return result;
 }
 
@@ -72,43 +70,79 @@ async function downloadFromGDIntoBuffer(googleStream) {
   });
 }
 
-async function downloadFileAndArchive(fileId, archiverStream) {
-  const file = await downloadFile(fileId);
+async function downloadFileAndArchive(fileId, archiverStream, authClient) {
+  const file = await downloadFile(fileId, authClient);
   archiverStream.append(file.stream, { name: file.details.name });
   await promisifiedFinished(file.stream);
 
   return file;
 }
 
-async function downloadFile(fileId) {
-  const authClient = await google.authentication();
-  const file = await google.getObject(fileId, authClient);
+async function downloadFile(fileId, authClient) {
+  const correspondingTypes = {
+    'application/vnd.google-apps.document':  {
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      ext: '.docx'
+    },
+    'application/vnd.google-apps.presentation': {
+      mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      ext: '.pptx'
+    },
+    'application/vnd.google-apps.spreadsheet': {
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ext: '.xlsx'
+    },
+    'application/vnd.google-apps.drawing': {
+      mimeType: 'image/png',
+      ext: '.png'
+    },
+    'application/vnd.google-apps.form': {
+      mimeType: "application/zip",
+      ext: '.zip'
+    }
+  };
+
+  let file = await google.getObject(fileId, authClient);
+  if ([
+    'application/vnd.google-apps.document',
+    'application/vnd.google-apps.presentation',
+    'application/vnd.google-apps.spreadsheet',
+    'application/vnd.google-apps.drawing',
+    'application/vnd.google-apps.form'
+  ].includes(file.mimeType)) {
+    file = { ...file, name: `${file.name}${correspondingTypes[file.mimeType].ext}` };
+  }
   const stream = await google.downloadFile(file.id, file.mimeType, authClient);
 
   return { details: file, stream };
 }
 
-async function downloadFolderFiles(folderId, archiverStream, folderName = '') {
-  const authClient = await google.authentication();
+
+const isFolderType = (file) => {
+  return file.mimeType === 'application/vnd.google-apps.folder';
+}
+
+async function downloadFolderFiles(folderId, archiverStream, authClient, folderName = '') {
   const filesDownloads = [];
   logger.log(`Getting folder files (folderId: '${folderId}')`);
   const files = await google.getFolderFiles(folderId, authClient);
-  logger.log(`Folder files count: ${files.length}`);
+  logger.log(`Folder files count: ${files.length || 0}`);
   for (let index = 0; index < files.length; index++) {
     const file = files[index];
     let name;
-    if (await isFolder(file.id)) {
+    if (isFolderType(file)) {
       name = file.name;
-      const downloadedFiles = await downloadFolderFiles(file.id, archiverStream, `${folderName}/${name}`);
+      const downloadedFiles = await downloadFolderFiles(file.id, archiverStream, authClient, `${folderName}/${name}`);
       filesDownloads.push(
-        { name, files: await downloadedFiles }
+        { name, files: Promise.all(downloadedFiles) }
       )
       continue;
     }
 
-    const downloadedFile = await downloadFile(file.id);
+    const downloadedFile = await downloadFile(file.id, authClient);
+    // console.log(downloadedFile);
     archiverStream.append(downloadedFile.stream, { name: `${folderName}/${downloadedFile.details.name}` })
-    await promisifiedFinished(downloadedFile.stream)
+    await promisifiedFinished(downloadedFile.stream);
     filesDownloads.push(downloadedFile);
   }
 
@@ -116,13 +150,15 @@ async function downloadFolderFiles(folderId, archiverStream, folderName = '') {
 }
 
 async function download(id, archiverStream) {
-  const isFolderState = await isFolder(id);
+  const authClient = await google.authentication();
+  const isFolderState = await isFolder(id, authClient);
   let result;
   if (isFolderState) {
-    result = await downloadFolderFiles(id, archiverStream);
+    result = await downloadFolderFiles(id, archiverStream, authClient);
+    return result;
   }
 
-  result = await downloadFileAndArchive(id, archiverStream);
+  result = await downloadFileAndArchive(id, archiverStream, authClient);
   return result;
 }
 
@@ -147,8 +183,8 @@ const getUrlId = (url) => {
   return url.split('/').reverse()[0];
 };
 
-Promise.resolve(main(getUrlId(testFile))).catch(console.error);
-// Promise.resolve(main(getUrlId(mainTestFolder))).catch(console.error);
+// Promise.resolve(main(getUrlId(testFile))).catch(console.error);
+Promise.resolve(main(getUrlId(mainTestFolder))).catch(console.error);
 // Promise.resolve(main(getUrlId(testFolderWithFiles))).catch(console.error);
 // Promise.resolve(main(getUrlId(testFolderWithFolders))).catch(console.error);
 // Promise.resolve(main(getUrlId(testFolderWithFoldersChains))).catch(console.error);
