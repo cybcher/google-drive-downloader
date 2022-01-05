@@ -60,47 +60,48 @@ async function downloadFolderFilesAndArchive(
   authClient,
   folderName = ""
 ) {
-  const filesDownloads = [];
-  let files;
+  const folderFiles = [];
+  let googleObjects;
   try {
     logger.log(`Getting folder files (folderId: '${folderId}')`);
-    files = await google.getFolderFiles(folderId, authClient);
+    googleObjects = await google.getFolderObjects(folderId, authClient);
   } catch (err) {
     logger.log(err);
   }
 
-  logger.log(`Folder files count: ${files.length || 0}`);
-  for (let index = 0; index < files.length; index++) {
-    const file = files[index];
-    if (google.isFolderType(file.mimeType)) {
+  logger.log(`Folder files count: ${googleObjects.length || 0}`);
+  for (let i = 0; i < googleObjects.length; i++) {
+    const googleObject = googleObjects[i];
+    if (google.isFolderType(googleObject.mimeType)) {
       const downloadFiles = await downloadFolderFilesAndArchive(
-        file.id,
+        googleObject.id,
         archiverStream,
         authClient,
-        `${folderName}/${file.name}`
+        `${folderName}/${googleObject.name}`
       );
       const downloadedFiles = await Promise.all(downloadFiles);
-      filesDownloads.push({ name: file.name, files: downloadedFiles });
+
+      folderFiles.push({ name: googleObject.name, files: downloadedFiles });
       continue;
     }
 
-    const downloadedFile = downloadFileAndArchive(file.id, archiverStream, authClient, folderName);
-    filesDownloads.push(downloadedFile);
+    const downloadedFile = downloadFileAndArchive(googleObject.id, archiverStream, authClient, folderName);
+    folderFiles.push(downloadedFile);
   }
 
-  return filesDownloads;
+  return folderFiles;
 }
 
 async function download(id, archiverStream) {
-  let authClient, isFolderFlag;
+  let authClient, objectIsFolder;
   try {
     authClient = await google.authentication();
-    isFolderFlag = await google.isFolder(id, authClient);
+    objectIsFolder = await google.isFolder(id, authClient);
   } catch (err) {
     logger.log(err);
   }
 
-  const result = (isFolderFlag)
+  const result = (objectIsFolder)
     ? await downloadFolderFilesAndArchive(id, archiverStream, authClient)
     : await downloadFileAndArchive(id, archiverStream, authClient);
 

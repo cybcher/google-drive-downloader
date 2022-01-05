@@ -86,7 +86,7 @@ async function isFolder(id, auth) {
   return isFolderType(object.mimeType);
 }
 
-async function getFolderFiles(folderId, auth) {
+async function getFolderObjects(folderId, auth) {
   const query = `'${folderId}' in parents`;
   const drive = google.drive({ version: "v3", auth });
   let result;
@@ -160,8 +160,8 @@ function downloadFile(fileId, fileMimeType, auth) {
 module.exports = {
   GOOGLE_WORKSPACE_MIME_TYPE_DOWNLOAD_MAP,
   GOOGLE_WORKSPACE_MIME_TYPES,
+  getFolderObjects,
   authentication,
-  getFolderFiles,
   isFolderType,
   downloadFile,
   getObject,
