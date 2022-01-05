@@ -41,7 +41,14 @@ async function downloadFileAndArchive(fileId, archiverStream, authClient, filePa
   if (filePath !== undefined) {
     fileSavePath = `${filePath}/${file.name}`;
   }
-  const stream = await google.downloadFile(file.id, file.mimeType, authClient);
+
+  let stream;
+  try {
+    stream = await google.downloadFile(file.id, file.mimeType, authClient);
+  } catch (err) {
+    logger.log(err);
+  }
+
   archiverStream.append(stream, { name: fileSavePath });
 
   return promisifiedFinished(stream);
@@ -54,12 +61,18 @@ async function downloadFolderFilesAndArchive(
   folderName = ""
 ) {
   const filesDownloads = [];
-  logger.log(`Getting folder files (folderId: '${folderId}')`);
-  const files = await google.getFolderFiles(folderId, authClient);
+  let files;
+  try {
+    logger.log(`Getting folder files (folderId: '${folderId}')`);
+    files = await google.getFolderFiles(folderId, authClient);
+  } catch (err) {
+    logger.log(err);
+  }
+
   logger.log(`Folder files count: ${files.length || 0}`);
   for (let index = 0; index < files.length; index++) {
     const file = files[index];
-    if (google.isObjectFolder(file)) {
+    if (google.isFolderType(file.mimeType)) {
       const downloadFiles = await downloadFolderFilesAndArchive(
         file.id,
         archiverStream,
@@ -79,8 +92,14 @@ async function downloadFolderFilesAndArchive(
 }
 
 async function download(id, archiverStream) {
-  const authClient = await google.authentication();
-  const isFolderFlag = await google.isFolder(id, authClient);
+  let authClient, isFolderFlag;
+  try {
+    authClient = await google.authentication();
+    isFolderFlag = await google.isFolder(id, authClient);
+  } catch (err) {
+    logger.log(err);
+  }
+
   const result = (isFolderFlag)
     ? await downloadFolderFilesAndArchive(id, archiverStream, authClient)
     : await downloadFileAndArchive(id, archiverStream, authClient);
