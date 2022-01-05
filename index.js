@@ -14,37 +14,20 @@ async function main(id) {
 
   const archiveStream = archiver.getArchiver();
   const fileStream = file.getFileStream(`${defaultPath}/google-drive.zip`);
+
   archiveStream.pipe(fileStream);
 
   await download(id, archiveStream);
+
   archiveStream.finalize(function (err, bytes) {
-    if (err) {
-      throw err;
-    }
+    if (err) throw err;
 
     logger.log(`${bytes} total bytes`);
   });
 }
 
-// helpers
-const getUrlId = (url) => {
-  return url.split("/").reverse()[0];
-};
-
-const isFolderType = (file) => {
-  return file.mimeType === "application/vnd.google-apps.folder";
-};
-
-// downloadFileAndArchive and downloadFile can be merged into one function
-async function downloadFileAndArchive(fileId, archiverStream, authClient) {
-  const file = await downloadFile(fileId, authClient);
-  archiverStream.append(file.stream, { name: file.details.name });
-  await promisifiedFinished(file.stream);
-
-  return file;
-}
-
-async function downloadFile(fileId, authClient, filePath = undefined) {
+async function downloadFileAndArchive(fileId, archiverStream, authClient, filePath = undefined) {
+  logger.log(`Getting file (fileId: '${fileId}')`);
   let file = await google.getObject(fileId, authClient);
   if (google.GOOGLE_WORKSPACE_MIME_TYPES.includes(file.mimeType)) {
     file = {
@@ -54,9 +37,14 @@ async function downloadFile(fileId, authClient, filePath = undefined) {
       }`,
     };
   }
+  let fileSavePath = file.name;
+  if (filePath !== undefined) {
+    fileSavePath = `${filePath}/${file.name}`;
+  }
   const stream = await google.downloadFile(file.id, file.mimeType, authClient);
+  archiverStream.append(stream, { name: fileSavePath });
 
-  return { details: file, stream };
+  return promisifiedFinished(stream);
 }
 
 async function downloadFolderFilesAndArchive(
@@ -71,24 +59,19 @@ async function downloadFolderFilesAndArchive(
   logger.log(`Folder files count: ${files.length || 0}`);
   for (let index = 0; index < files.length; index++) {
     const file = files[index];
-    let name;
-    if (isFolderType(file)) {
-      name = file.name;
-      const downloadedFiles = await downloadFolderFilesAndArchive(
+    if (google.isObjectFolder(file)) {
+      const downloadFiles = await downloadFolderFilesAndArchive(
         file.id,
         archiverStream,
         authClient,
-        `${folderName}/${name}`
+        `${folderName}/${file.name}`
       );
-      filesDownloads.push({ name, files: Promise.all(downloadedFiles) });
+      const downloadedFiles = await Promise.all(downloadFiles);
+      filesDownloads.push({ name: file.name, files: downloadedFiles });
       continue;
     }
 
-    const downloadedFile = await downloadFile(file.id, authClient, folderName);
-    archiverStream.append(downloadedFile.stream, {
-      name: `${folderName}/${downloadedFile.details.name}`,
-    });
-    await promisifiedFinished(downloadedFile.stream);
+    const downloadedFile = downloadFileAndArchive(file.id, archiverStream, authClient, folderName);
     filesDownloads.push(downloadedFile);
   }
 
@@ -98,7 +81,7 @@ async function downloadFolderFilesAndArchive(
 async function download(id, archiverStream) {
   const authClient = await google.authentication();
   const isFolderFlag = await google.isFolder(id, authClient);
-  const result = isFolderFlag
+  const result = (isFolderFlag)
     ? await downloadFolderFilesAndArchive(id, archiverStream, authClient)
     : await downloadFileAndArchive(id, archiverStream, authClient);
 
@@ -116,8 +99,16 @@ const testFolderWithFolders =
 const testFolderWithFoldersChains =
   "https://drive.google.com/drive/folders/1b1KwBG5WrA16jqXaphdnbfr7Fa1KgMn2";
 
+// Helpers
+const getUrlId = (url) => {
+  return url.split("/").reverse()[0];
+};
+
 // Promise.resolve(main(getUrlId(testFile))).catch(console.error);
 Promise.resolve(main(getUrlId(mainTestFolder))).catch(console.error);
 // Promise.resolve(main(getUrlId(testFolderWithFiles))).catch(console.error);
 // Promise.resolve(main(getUrlId(testFolderWithFolders))).catch(console.error);
 // Promise.resolve(main(getUrlId(testFolderWithFoldersChains))).catch(console.error);
+
+// Google: 18, 17, 11, NEW 15, 12, 16
+// My tool: 44, 38, 41, NEW 21, 21, 21

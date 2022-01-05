@@ -61,6 +61,7 @@ async function getObject(fileId, auth) {
   try {
     result = await drive.files.get({ fileId });
   } catch (err) {
+    throw err;
     logger.log("Error while getting google drive object:", err);
   }
 
@@ -75,10 +76,15 @@ async function getObject(fileId, auth) {
   return false;
 }
 
+function isObjectFolder(file) {
+  return file.mimeType === "application/vnd.google-apps.folder";
+};
+
 async function isFolder(id, auth) {
-  const item = await getObject(id, auth);
-  logger.log("Item:", item);
-  return item.mimeType === "application/vnd.google-apps.folder";
+  const object = await getObject(id, auth);
+  logger.log("Object:", object);
+
+  return isObjectFolder(object);
 }
 
 async function isFile(id, auth) {
@@ -161,8 +167,11 @@ function downloadFile(fileId, fileMimeType, auth) {
 }
 
 module.exports = {
+  GOOGLE_WORKSPACE_MIME_TYPES,
+  GOOGLE_WORKSPACE_MIME_TYPE_DOWNLOAD_MAP,
   authentication,
   getFolderFiles,
+  isObjectFolder,
   downloadFile,
   getObject,
   isFolder,
